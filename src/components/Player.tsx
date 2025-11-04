@@ -1,12 +1,39 @@
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { ObstacleData } from './Game';
 
 interface PlayerProps {
   onPositionChange: (position: THREE.Vector3) => void;
+  obstacles: ObstacleData[];
 }
 
-export const Player = ({ onPositionChange }: PlayerProps) => {
+export const Player = ({ onPositionChange, obstacles }: PlayerProps) => {
+  const checkCollision = (newPos: THREE.Vector3): boolean => {
+    const playerRadius = 0.5;
+    
+    for (const obstacle of obstacles) {
+      const [ox, oy, oz] = obstacle.position;
+      const [sx, sy, sz] = obstacle.size;
+      
+      // Vérification de collision avec boîte englobante
+      const minX = ox - sx / 2;
+      const maxX = ox + sx / 2;
+      const minZ = oz - sz / 2;
+      const maxZ = oz + sz / 2;
+      
+      if (
+        newPos.x + playerRadius > minX &&
+        newPos.x - playerRadius < maxX &&
+        newPos.z + playerRadius > minZ &&
+        newPos.z - playerRadius < maxZ
+      ) {
+        return true; // Collision détectée
+      }
+    }
+    
+    return false; // Pas de collision
+  };
   const position = useRef(new THREE.Vector3(0, 1.6, 0));
   const velocity = useRef(new THREE.Vector3());
   const keys = useRef({
@@ -111,10 +138,28 @@ export const Player = ({ onPositionChange }: PlayerProps) => {
       velocity.current.lerp(new THREE.Vector3(), 0.3);
     }
 
-    // Update position with boundaries
-    position.current.add(velocity.current);
-    position.current.x = Math.max(-45, Math.min(45, position.current.x));
-    position.current.z = Math.max(-45, Math.min(45, position.current.z));
+    // Calcul de la nouvelle position
+    const newPosition = position.current.clone().add(velocity.current);
+    newPosition.x = Math.max(-45, Math.min(45, newPosition.x));
+    newPosition.z = Math.max(-45, Math.min(45, newPosition.z));
+
+    // Vérification des collisions avant de bouger
+    if (!checkCollision(newPosition)) {
+      position.current.copy(newPosition);
+    } else {
+      // Essaie de glisser le long de l'obstacle
+      const slideX = position.current.clone();
+      slideX.x = newPosition.x;
+      if (!checkCollision(slideX)) {
+        position.current.x = slideX.x;
+      }
+      
+      const slideZ = position.current.clone();
+      slideZ.z = newPosition.z;
+      if (!checkCollision(slideZ)) {
+        position.current.z = slideZ.z;
+      }
+    }
 
     // Update camera position
     state.camera.position.x = position.current.x;

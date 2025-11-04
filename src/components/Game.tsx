@@ -15,6 +15,11 @@ interface EnemyData {
   speed: number;
 }
 
+export interface ObstacleData {
+  position: [number, number, number];
+  size: [number, number, number];
+}
+
 export const Game = () => {
   const [score, setScore] = useState(0);
   const [health, setHealth] = useState(100);
@@ -26,15 +31,13 @@ export const Game = () => {
   const spawnInterval = useRef<NodeJS.Timeout>();
   const damageInterval = useRef<NodeJS.Timeout>();
 
-  const obstacles = [
-    { position: [10, 1.5, 10] as [number, number, number], size: [3, 3, 3] as [number, number, number] },
-    { position: [-10, 1.5, 10] as [number, number, number], size: [2, 3, 2] as [number, number, number] },
-    { position: [10, 1.5, -10] as [number, number, number], size: [2, 3, 4] as [number, number, number] },
-    { position: [-10, 1.5, -10] as [number, number, number], size: [3, 3, 2] as [number, number, number] },
-    { position: [0, 1.5, 15] as [number, number, number], size: [4, 3, 2] as [number, number, number] },
-    { position: [0, 1.5, -15] as [number, number, number], size: [2, 3, 4] as [number, number, number] },
-    { position: [15, 1.5, 0] as [number, number, number], size: [2, 3, 3] as [number, number, number] },
-    { position: [-15, 1.5, 0] as [number, number, number], size: [3, 3, 2] as [number, number, number] },
+  const obstacles: ObstacleData[] = [
+    { position: [10, 1.5, 10], size: [3, 3, 3] },
+    { position: [-10, 1.5, 10], size: [2, 3, 2] },
+    { position: [10, 1.5, -10], size: [2, 3, 4] },
+    { position: [-10, 1.5, -10], size: [3, 3, 2] },
+    { position: [0, 1.5, 15], size: [4, 3, 2] },
+    { position: [0, 1.5, -15], size: [2, 3, 4] },
   ];
 
   const spawnEnemy = useCallback(() => {
@@ -54,32 +57,42 @@ export const Game = () => {
 
   useEffect(() => {
     if (!gameOver && isLocked) {
+      // Réduit la fréquence d'apparition des ennemis à 5 secondes
       spawnInterval.current = setInterval(() => {
         spawnEnemy();
-      }, 2000);
+      }, 5000);
 
       damageInterval.current = setInterval(() => {
         setEnemies(current => {
-          const closeEnemies = current.filter(enemy => {
+          const closeEnemies: number[] = [];
+          
+          current.forEach(enemy => {
             const dx = enemy.position[0] - playerPosition.current.x;
             const dz = enemy.position[2] - playerPosition.current.z;
             const distance = Math.sqrt(dx ** 2 + dz ** 2);
-            return distance < 3;
+            
+            // Si l'ennemi touche le joueur
+            if (distance < 2) {
+              closeEnemies.push(enemy.id);
+            }
           });
           
           if (closeEnemies.length > 0) {
             setHealth(h => {
-              const newHealth = Math.max(0, h - 5);
+              const newHealth = Math.max(0, h - 10);
               if (newHealth === 0) {
                 setGameOver(true);
               }
               return newHealth;
             });
+            
+            // Supprime les ennemis qui ont touché le joueur
+            return current.filter(enemy => !closeEnemies.includes(enemy.id));
           }
           
           return current;
         });
-      }, 500);
+      }, 200);
     }
 
     return () => {
@@ -145,10 +158,14 @@ export const Game = () => {
             speed={enemy.speed}
             onClick={() => handleEnemyClick(enemy.id)}
             playerPosition={playerPosition.current}
+            obstacles={obstacles}
           />
         ))}
 
-        <Player onPositionChange={(pos) => playerPosition.current.copy(pos)} />
+        <Player 
+          onPositionChange={(pos) => playerPosition.current.copy(pos)}
+          obstacles={obstacles}
+        />
         <Weapon />
         <PointerLockControls />
       </Canvas>

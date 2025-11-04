@@ -1,31 +1,64 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { ObstacleData } from './Game';
 
 interface EnemyProps {
   position: [number, number, number];
   speed: number;
   onClick: () => void;
   playerPosition: THREE.Vector3;
+  obstacles: ObstacleData[];
 }
 
-export const Enemy = ({ position, speed, onClick, playerPosition }: EnemyProps) => {
+export const Enemy = ({ position, speed, onClick, playerPosition, obstacles }: EnemyProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const bodyMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const headMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
 
+  const checkCollision = (newPos: THREE.Vector3): boolean => {
+    const enemyRadius = 0.5;
+    
+    for (const obstacle of obstacles) {
+      const [ox, oy, oz] = obstacle.position;
+      const [sx, sy, sz] = obstacle.size;
+      
+      const minX = ox - sx / 2;
+      const maxX = ox + sx / 2;
+      const minZ = oz - sz / 2;
+      const maxZ = oz + sz / 2;
+      
+      if (
+        newPos.x + enemyRadius > minX &&
+        newPos.x - enemyRadius < maxX &&
+        newPos.z + enemyRadius > minZ &&
+        newPos.z - enemyRadius < maxZ
+      ) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   useFrame(() => {
     if (groupRef.current) {
-      // Follow the player's position
+      // Direction vers le joueur
       const direction = new THREE.Vector3(
         playerPosition.x - groupRef.current.position.x,
         0,
         playerPosition.z - groupRef.current.position.z
       ).normalize();
       
-      groupRef.current.position.add(direction.multiplyScalar(speed));
+      // Calcul de la nouvelle position
+      const newPosition = groupRef.current.position.clone().add(direction.multiplyScalar(speed));
       
-      // Make enemy look at player
+      // Vérifie la collision avant de bouger
+      if (!checkCollision(newPosition)) {
+        groupRef.current.position.copy(newPosition);
+      }
+      
+      // Regarde toujours le joueur
       groupRef.current.lookAt(playerPosition.x, playerPosition.y, playerPosition.z);
     }
   });
