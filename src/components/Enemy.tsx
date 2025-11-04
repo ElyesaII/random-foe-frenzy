@@ -10,22 +10,23 @@ interface EnemyProps {
 }
 
 export const Enemy = ({ position, speed, onClick, playerPosition }: EnemyProps) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const bodyMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const headMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useFrame(() => {
-    if (meshRef.current) {
+    if (groupRef.current) {
       // Follow the player's position
       const direction = new THREE.Vector3(
-        playerPosition.x - meshRef.current.position.x,
+        playerPosition.x - groupRef.current.position.x,
         0,
-        playerPosition.z - meshRef.current.position.z
+        playerPosition.z - groupRef.current.position.z
       ).normalize();
       
-      meshRef.current.position.add(direction.multiplyScalar(speed));
+      groupRef.current.position.add(direction.multiplyScalar(speed));
       
       // Make enemy look at player
-      meshRef.current.lookAt(playerPosition.x, playerPosition.y, playerPosition.z);
+      groupRef.current.lookAt(playerPosition.x, playerPosition.y, playerPosition.z);
     }
   });
 
@@ -33,30 +34,37 @@ export const Enemy = ({ position, speed, onClick, playerPosition }: EnemyProps) 
     e.stopPropagation();
     
     // Flash effect
-    if (materialRef.current) {
-      materialRef.current.color.set('#ff0000');
-      setTimeout(() => {
-        if (materialRef.current) {
-          materialRef.current.color.set('#ff4444');
-        }
-      }, 50);
+    if (bodyMaterialRef.current) {
+      bodyMaterialRef.current.color.set('#ff0000');
     }
+    if (headMaterialRef.current) {
+      headMaterialRef.current.color.set('#ff0000');
+    }
+    
+    setTimeout(() => {
+      if (bodyMaterialRef.current) {
+        bodyMaterialRef.current.color.set('#ff4444');
+      }
+      if (headMaterialRef.current) {
+        headMaterialRef.current.color.set('#ff6666');
+      }
+    }, 50);
     
     onClick();
   };
 
   return (
-    <group position={position}>
+    <group ref={groupRef} position={position}>
       {/* Body */}
-      <mesh ref={meshRef} onClick={handleClick} castShadow>
+      <mesh onClick={handleClick} castShadow>
         <boxGeometry args={[0.8, 1.6, 0.4]} />
-        <meshStandardMaterial ref={materialRef} color="#ff4444" />
+        <meshStandardMaterial ref={bodyMaterialRef} color="#ff4444" />
       </mesh>
       
       {/* Head */}
       <mesh position={[0, 1.2, 0]} onClick={handleClick} castShadow>
         <sphereGeometry args={[0.4, 16, 16]} />
-        <meshStandardMaterial color="#ff6666" />
+        <meshStandardMaterial ref={headMaterialRef} color="#ff6666" />
       </mesh>
     </group>
   );

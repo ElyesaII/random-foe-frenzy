@@ -6,6 +6,7 @@ import { HUD } from './HUD';
 import { Crosshair } from './Crosshair';
 import { Player } from './Player';
 import { Obstacle } from './Obstacle';
+import { Weapon } from './Weapon';
 import * as THREE from 'three';
 
 interface EnemyData {
@@ -148,6 +149,7 @@ export const Game = () => {
         ))}
 
         <Player onPositionChange={(pos) => playerPosition.current.copy(pos)} />
+        <Weapon />
         <PointerLockControls />
       </Canvas>
 
