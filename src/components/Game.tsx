@@ -4,6 +4,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Enemy } from './Enemy';
 import { HUD } from './HUD';
 import { Crosshair } from './Crosshair';
+import { Player } from './Player';
+import { Obstacle } from './Obstacle';
 import * as THREE from 'three';
 
 interface EnemyData {
@@ -18,9 +20,21 @@ export const Game = () => {
   const [enemies, setEnemies] = useState<EnemyData[]>([]);
   const [gameOver, setGameOver] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const playerPosition = useRef(new THREE.Vector3(0, 1.6, 0));
   const enemyIdCounter = useRef(0);
   const spawnInterval = useRef<NodeJS.Timeout>();
   const damageInterval = useRef<NodeJS.Timeout>();
+
+  const obstacles = [
+    { position: [10, 1.5, 10] as [number, number, number], size: [3, 3, 3] as [number, number, number] },
+    { position: [-10, 1.5, 10] as [number, number, number], size: [2, 3, 2] as [number, number, number] },
+    { position: [10, 1.5, -10] as [number, number, number], size: [2, 3, 4] as [number, number, number] },
+    { position: [-10, 1.5, -10] as [number, number, number], size: [3, 3, 2] as [number, number, number] },
+    { position: [0, 1.5, 15] as [number, number, number], size: [4, 3, 2] as [number, number, number] },
+    { position: [0, 1.5, -15] as [number, number, number], size: [2, 3, 4] as [number, number, number] },
+    { position: [15, 1.5, 0] as [number, number, number], size: [2, 3, 3] as [number, number, number] },
+    { position: [-15, 1.5, 0] as [number, number, number], size: [3, 3, 2] as [number, number, number] },
+  ];
 
   const spawnEnemy = useCallback(() => {
     const angle = Math.random() * Math.PI * 2;
@@ -46,7 +60,9 @@ export const Game = () => {
       damageInterval.current = setInterval(() => {
         setEnemies(current => {
           const closeEnemies = current.filter(enemy => {
-            const distance = Math.sqrt(enemy.position[0] ** 2 + enemy.position[2] ** 2);
+            const dx = enemy.position[0] - playerPosition.current.x;
+            const dz = enemy.position[2] - playerPosition.current.z;
+            const distance = Math.sqrt(dx ** 2 + dz ** 2);
             return distance < 3;
           });
           
@@ -111,15 +127,27 @@ export const Game = () => {
         {/* Grid */}
         <gridHelper args={[100, 50, '#4a6a4a', '#3a5a3a']} position={[0, 0.01, 0]} />
 
+        {/* Obstacles */}
+        {obstacles.map((obstacle, index) => (
+          <Obstacle
+            key={index}
+            position={obstacle.position}
+            size={obstacle.size}
+          />
+        ))}
+
+        {/* Enemies */}
         {enemies.map(enemy => (
           <Enemy
             key={enemy.id}
             position={enemy.position}
             speed={enemy.speed}
             onClick={() => handleEnemyClick(enemy.id)}
+            playerPosition={playerPosition.current}
           />
         ))}
 
+        <Player onPositionChange={(pos) => playerPosition.current.copy(pos)} />
         <PointerLockControls />
       </Canvas>
 
@@ -131,7 +159,10 @@ export const Game = () => {
           <div className="text-center space-y-4">
             <h2 className="text-4xl font-bold text-foreground">FPS SHOOTER</h2>
             <p className="text-muted-foreground">Cliquez pour commencer</p>
-            <p className="text-sm text-muted-foreground">Cliquez pour tirer sur les ennemis</p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>🎯 Cliquez pour tirer sur les ennemis</p>
+              <p>⬆️⬇️⬅️➡️ Flèches pour se déplacer</p>
+            </div>
           </div>
         </div>
       )}

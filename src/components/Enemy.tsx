@@ -6,19 +6,26 @@ interface EnemyProps {
   position: [number, number, number];
   speed: number;
   onClick: () => void;
+  playerPosition: THREE.Vector3;
 }
 
-export const Enemy = ({ position, speed, onClick }: EnemyProps) => {
+export const Enemy = ({ position, speed, onClick, playerPosition }: EnemyProps) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useFrame(() => {
     if (meshRef.current) {
-      const direction = new THREE.Vector3(0, 0, 0).sub(meshRef.current.position).normalize();
+      // Follow the player's position
+      const direction = new THREE.Vector3(
+        playerPosition.x - meshRef.current.position.x,
+        0,
+        playerPosition.z - meshRef.current.position.z
+      ).normalize();
+      
       meshRef.current.position.add(direction.multiplyScalar(speed));
       
       // Make enemy look at player
-      meshRef.current.lookAt(0, 1.6, 0);
+      meshRef.current.lookAt(playerPosition.x, playerPosition.y, playerPosition.z);
     }
   });
 
